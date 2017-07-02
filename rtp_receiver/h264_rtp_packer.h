@@ -11,15 +11,15 @@ typedef struct h264_rtp_packer h264_rtp_packer_t;
 
 typedef void (*rtp_sink_f)(const unsigned char *rtp_packet, unsigned len, void *userdata);
 
-/* max_playload_len ±íÊ¾rtp¸ºÔØ²¿·Ö×î´óÈİÁ¿£¬²»º¬RTP°üÍ·12×Ö½ÚµÄÄÚÈİ£¬Ê¹ÓÃÕß×ÔĞĞÈ·¶¨RTP·â°üÍê±ÏÖ®ºó£¬ÕûÌåIP°ü²»³¬¹ıMTUÖµ 
- * ×îÖÕ×îÊä³öµÄRTP°ü³ß´ç×î´óÎª 12+max_playload_len
+/* max_playload_len è¡¨ç¤ºrtpè´Ÿè½½éƒ¨åˆ†æœ€å¤§å®¹é‡ï¼Œä¸å«RTPåŒ…å¤´12å­—èŠ‚çš„å†…å®¹ï¼Œä½¿ç”¨è€…è‡ªè¡Œç¡®å®šRTPå°åŒ…å®Œæ¯•ä¹‹åï¼Œæ•´ä½“IPåŒ…ä¸è¶…è¿‡MTUå€¼ 
+ * æœ€ç»ˆæœ€è¾“å‡ºçš„RTPåŒ…å°ºå¯¸æœ€å¤§ä¸º 12+max_playload_len
  */
 h264_rtp_packer_t* h264_rtp_packer_new(unsigned pt, unsigned init_sn, unsigned ssrc, unsigned max_playload_len, rtp_sink_f sink, void *userdata);
 
 void h264_rtp_packer_destroy(h264_rtp_packer_t* packer);
 
-/* ts±íÊ¾naluËùÊôµÄÍ¼ÏñÖ¡µÄÊ±¼ä´Á£¬µ¥Î»ÓëRTP°üÍ·ÖĞµÄÊ±´Áµ¥Î»ÏàÍ¬£¬
- * is_last±íÊ¾¸ø¶¨µÄnaluÊÇ·ñÊÇ¶ÔÓ¦Access Unit×îºóÒ»¸önalu,ÓÃÓÚÈ·¶¨rtp·â°üµÄmark±ê¼Ç 
+/* tsè¡¨ç¤ºnaluæ‰€å±çš„å›¾åƒå¸§çš„æ—¶é—´æˆ³ï¼Œå•ä½ä¸RTPåŒ…å¤´ä¸­çš„æ—¶æˆ³å•ä½ç›¸åŒï¼Œ
+ * is_lastè¡¨ç¤ºç»™å®šçš„naluæ˜¯å¦æ˜¯å¯¹åº”Access Unitæœ€åä¸€ä¸ªnalu,ç”¨äºç¡®å®šrtpå°åŒ…çš„markæ ‡è®° 
  */
 void h264_rtp_packer_pack(h264_rtp_packer_t* packer, const unsigned char *nalu, unsigned len, unsigned ts, int is_last);
 #ifdef __cplusplus

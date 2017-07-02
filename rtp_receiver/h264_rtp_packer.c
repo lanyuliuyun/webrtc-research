@@ -6,190 +6,190 @@
 #include <stdint.h>
 
 #ifdef WIN32
-	#include <winsock2.h>			/* for htons()/htonl() */
+    #include <winsock2.h>            /* for htons()/htonl() */
 #else
-	#include <arpa/inet.h>			/* for htons()/htonl() */
+    #include <arpa/inet.h>            /* for htons()/htonl() */
 #endif
 
 typedef struct rtp_head
 {
-	uint16_t CC : 4;
-	uint16_t X : 1;
-	uint16_t P : 1;
-	uint16_t V : 2;
+    uint16_t CC : 4;
+    uint16_t X : 1;
+    uint16_t P : 1;
+    uint16_t V : 2;
 
-	uint16_t PT : 7;
-	uint16_t M : 1;
+    uint16_t PT : 7;
+    uint16_t M : 1;
 
-	uint16_t SN;
+    uint16_t SN;
 
-	uint32_t timestamp;
-	uint32_t ssrc;
+    uint32_t timestamp;
+    uint32_t ssrc;
 }rtp_head_t;
 
 struct h264_rtp_packer
 {
-	rtp_sink_f rtp_sink;
-	void *userdata;
+    rtp_sink_f rtp_sink;
+    void *userdata;
 
-	unsigned short sn;
-	unsigned timestamp;
+    unsigned short sn;
+    unsigned timestamp;
 
-	unsigned max_playload_len;
-	struct
-	{
-		rtp_head_t *head;
-		unsigned char *payload;
-	}packet;
+    unsigned max_playload_len;
+    struct
+    {
+        rtp_head_t *head;
+        unsigned char *payload;
+    }packet;
 };
 
 h264_rtp_packer_t* h264_rtp_packer_new(unsigned pt, unsigned init_sn, unsigned ssrc, unsigned max_playload_len, rtp_sink_f sink, void *userdata)
 {
-	h264_rtp_packer_t* packer;
+    h264_rtp_packer_t* packer;
 
-	if (NULL == sink)
-	{
-		return NULL;
-	}
+    if (NULL == sink)
+    {
+        return NULL;
+    }
 
-	packer = (h264_rtp_packer_t*)malloc(sizeof(h264_rtp_packer_t)+sizeof(rtp_head_t)+max_playload_len);
+    packer = (h264_rtp_packer_t*)malloc(sizeof(h264_rtp_packer_t)+sizeof(rtp_head_t)+max_playload_len);
 
-	memset(packer, 0, sizeof(h264_rtp_packer_t)+sizeof(rtp_head_t)+max_playload_len);
-	packer->rtp_sink = sink;
-	packer->userdata = userdata;
-	packer->max_playload_len = max_playload_len;
-	packer->sn = init_sn;
+    memset(packer, 0, sizeof(h264_rtp_packer_t)+sizeof(rtp_head_t)+max_playload_len);
+    packer->rtp_sink = sink;
+    packer->userdata = userdata;
+    packer->max_playload_len = max_playload_len;
+    packer->sn = init_sn;
 
-	packer->packet.head = (rtp_head_t*)&packer[1];
-	packer->packet.payload = (unsigned char*)&packer->packet.head[1];
+    packer->packet.head = (rtp_head_t*)&packer[1];
+    packer->packet.payload = (unsigned char*)&packer->packet.head[1];
 
-	packer->packet.head->V = 2;
-	packer->packet.head->P = 0;
-	packer->packet.head->X = 0;
-	packer->packet.head->CC = 0;	
-	packer->packet.head->PT = pt & 0x7f;
-	packer->packet.head->ssrc = htonl(ssrc);
+    packer->packet.head->V = 2;
+    packer->packet.head->P = 0;
+    packer->packet.head->X = 0;
+    packer->packet.head->CC = 0;    
+    packer->packet.head->PT = pt & 0x7f;
+    packer->packet.head->ssrc = htonl(ssrc);
 
-	/* ÒÔÏÂ¼¸¸öÊôÐÔÔÚ´ò°ü¹ý³ÌÖÐ»á¶¯Ì¬±ä»¯ */
-	packer->packet.head->M = 0;
-	packer->packet.head->SN = 0;
-	packer->packet.head->timestamp = 0;
+    /* ä»¥ä¸‹å‡ ä¸ªå±žæ€§åœ¨æ‰“åŒ…è¿‡ç¨‹ä¸­ä¼šåŠ¨æ€å˜åŒ– */
+    packer->packet.head->M = 0;
+    packer->packet.head->SN = 0;
+    packer->packet.head->timestamp = 0;
 
-	return packer;
+    return packer;
 }
 
 void h264_rtp_packer_destroy(h264_rtp_packer_t* packer)
 {
-	free(packer);
+    free(packer);
 
-	return;
+    return;
 }
 
 void h264_rtp_packer_pack(h264_rtp_packer_t* packer, const unsigned char *nalu, unsigned len, unsigned ts, int is_last)
 {
-	unsigned packet_size;
-	unsigned char* payload;
-	unsigned max_playload_len;
-	unsigned char nalu_type;
-	const unsigned char *nalu_ptr;
+    unsigned packet_size;
+    unsigned char* payload;
+    unsigned max_playload_len;
+    unsigned char nalu_type;
+    const unsigned char *nalu_ptr;
 
-	if (NULL == packer || NULL == nalu || 0 == len)
-	{
-		return;
-	}
+    if (NULL == packer || NULL == nalu || 0 == len)
+    {
+        return;
+    }
 
-	packer->packet.head->timestamp = htonl(ts);
+    packer->packet.head->timestamp = htonl(ts);
 
-	payload = packer->packet.payload;
-	max_playload_len = packer->max_playload_len;
-	
-	if (len <= max_playload_len)
-	{
-		/* µ±Ç°NALU¿ÉÒÔÔÚÒ»¸öRTP°üÖÐÈÝÄÉ£¬Ôò²ÉÓÃsingle NALU mode */
-		packet_size = sizeof(rtp_head_t);
-		memcpy(payload, nalu, len);
-		packet_size += len;
-		if (is_last)
-		{
-			packer->packet.head->M = 1;
-		}
-		else
-		{
-			packer->packet.head->M = 0;
-		}
-		packer->packet.head->SN = htons(packer->sn);
-		packer->rtp_sink((unsigned char*)packer->packet.head, packet_size, packer->userdata);
-		packer->sn++;
-	}
-	else
-	{
-		/* ÐèÒª½øÐÐ·ÖÆ¬´¦Àí */
-		
-		nalu_type = nalu[0];
-		nalu_ptr = nalu;
-		
-		packer->packet.head->M = 0;
-		
-		/* ÆðÊ¼Æ¬ */
-		packet_size = sizeof(rtp_head_t);
-		/* FU indicator */
-		payload[0] = (nalu_type & 0xE0) | 28;
-		/* FU header */
-		payload[1] = (nalu_type & 0x1F) | 0x80;
-		nalu_ptr++;
-		memcpy(payload+2, nalu_ptr, max_playload_len-2);
-		packet_size += max_playload_len;
+    payload = packer->packet.payload;
+    max_playload_len = packer->max_playload_len;
+    
+    if (len <= max_playload_len)
+    {
+        /* å½“å‰NALUå¯ä»¥åœ¨ä¸€ä¸ªRTPåŒ…ä¸­å®¹çº³ï¼Œåˆ™é‡‡ç”¨single NALU mode */
+        packet_size = sizeof(rtp_head_t);
+        memcpy(payload, nalu, len);
+        packet_size += len;
+        if (is_last)
+        {
+            packer->packet.head->M = 1;
+        }
+        else
+        {
+            packer->packet.head->M = 0;
+        }
+        packer->packet.head->SN = htons(packer->sn);
+        packer->rtp_sink((unsigned char*)packer->packet.head, packet_size, packer->userdata);
+        packer->sn++;
+    }
+    else
+    {
+        /* éœ€è¦è¿›è¡Œåˆ†ç‰‡å¤„ç† */
+        
+        nalu_type = nalu[0];
+        nalu_ptr = nalu;
+        
+        packer->packet.head->M = 0;
+        
+        /* èµ·å§‹ç‰‡ */
+        packet_size = sizeof(rtp_head_t);
+        /* FU indicator */
+        payload[0] = (nalu_type & 0xE0) | 28;
+        /* FU header */
+        payload[1] = (nalu_type & 0x1F) | 0x80;
+        nalu_ptr++;
+        memcpy(payload+2, nalu_ptr, max_playload_len-2);
+        packet_size += max_playload_len;
 
-		packer->packet.head->SN = htons(packer->sn);
-		packer->sn++;
-		packer->rtp_sink((unsigned char*)packer->packet.head, packet_size, packer->userdata);
+        packer->packet.head->SN = htons(packer->sn);
+        packer->sn++;
+        packer->rtp_sink((unsigned char*)packer->packet.head, packet_size, packer->userdata);
 
-		/* payload ÖÐÒÑ¾­Ìî³äÁË2¸ö×Ö½Ú
-		 * ÆðÊ¼Æ¬ÏûºÄµôNALUÖÐ(max_playload_len-1)¸öbytes
-		 */
-		nalu_ptr += max_playload_len-2;
-		len -= max_playload_len - 1;
-		
-		while (len > (max_playload_len-2))
-		{
-			/* ¼ÌÐø·ÖÆ¬ */
-			
-			/* ÖÐ¼äÆ¬ */
-			packet_size = sizeof(rtp_head_t);
-			/* FU indicator */
-			payload[0] = (nalu_type & 0xE0) | 28;
-			/* FU header */
-			payload[1] = (nalu_type & 0x1F);
+        /* payload ä¸­å·²ç»å¡«å……äº†2ä¸ªå­—èŠ‚
+         * èµ·å§‹ç‰‡æ¶ˆè€—æŽ‰NALUä¸­(max_playload_len-1)ä¸ªbytes
+         */
+        nalu_ptr += max_playload_len-2;
+        len -= max_playload_len - 1;
+        
+        while (len > (max_playload_len-2))
+        {
+            /* ç»§ç»­åˆ†ç‰‡ */
+            
+            /* ä¸­é—´ç‰‡ */
+            packet_size = sizeof(rtp_head_t);
+            /* FU indicator */
+            payload[0] = (nalu_type & 0xE0) | 28;
+            /* FU header */
+            payload[1] = (nalu_type & 0x1F);
 
-			memcpy(payload+2, nalu_ptr, max_playload_len-2);
-			packet_size += max_playload_len;
+            memcpy(payload+2, nalu_ptr, max_playload_len-2);
+            packet_size += max_playload_len;
 
-			packer->packet.head->SN = htons(packer->sn);
-			packer->rtp_sink((unsigned char*)packer->packet.head, packet_size, packer->userdata);
-			packer->sn++;
+            packer->packet.head->SN = htons(packer->sn);
+            packer->rtp_sink((unsigned char*)packer->packet.head, packet_size, packer->userdata);
+            packer->sn++;
 
-			/* ±¾ÖÐ¼äÆ¬ÏûºÄµô(max_playload_len-2)¸öbytes */
-			nalu_ptr += max_playload_len-2;
-			len -= max_playload_len-2;
-		}
+            /* æœ¬ä¸­é—´ç‰‡æ¶ˆè€—æŽ‰(max_playload_len-2)ä¸ªbytes */
+            nalu_ptr += max_playload_len-2;
+            len -= max_playload_len-2;
+        }
 
-		/* ½áÊøÆ¬ */
-		packet_size = sizeof(rtp_head_t);
-		/* FU indicator */
-		payload[0] = (nalu_type & 0xE0) | 28;
-		/* FU header */
-		payload[1] = (nalu_type & 0x1F) | 0x40;
-		memcpy(payload+2, nalu_ptr, len);
-		packet_size += len + 2;
-		if (is_last)
-		{
-			packer->packet.head->M = 1;
-		}
-		
-		packer->packet.head->SN = htons(packer->sn);
-		packer->rtp_sink((unsigned char*)packer->packet.head, packet_size, packer->userdata);
-		packer->sn++;
-	}
+        /* ç»“æŸç‰‡ */
+        packet_size = sizeof(rtp_head_t);
+        /* FU indicator */
+        payload[0] = (nalu_type & 0xE0) | 28;
+        /* FU header */
+        payload[1] = (nalu_type & 0x1F) | 0x40;
+        memcpy(payload+2, nalu_ptr, len);
+        packet_size += len + 2;
+        if (is_last)
+        {
+            packer->packet.head->M = 1;
+        }
+        
+        packer->packet.head->SN = htons(packer->sn);
+        packer->rtp_sink((unsigned char*)packer->packet.head, packet_size, packer->userdata);
+        packer->sn++;
+    }
 
-	return;
+    return;
 }

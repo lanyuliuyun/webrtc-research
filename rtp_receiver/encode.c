@@ -336,7 +336,7 @@ int main(int argc, char *argv[])
 
     fclose(fp);
 
-	return 0;
+    return 0;
 }
 
 #endif // !TEST_ENCODE
