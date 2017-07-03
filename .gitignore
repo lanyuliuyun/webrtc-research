@@ -1,4 +1,4 @@
 Debug/
-*.VC.db
+*.VC.*
 */Debug/
 .vs/
