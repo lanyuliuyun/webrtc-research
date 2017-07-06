@@ -3,6 +3,12 @@
 #include <webrtc/modules/rtp_rtcp/include/rtp_payload_registry.h>   // for webrtc::RTPPayloadRegistry
 #include <webrtc/common_types.h>   // for webrtc::VideoCodec
 #include <webrtc/modules/rtp_rtcp/include/rtp_header_parser.h>   // for webrtc::RtpHeaderParser
+
+//#include <webrtc/modules/rtp_rtcp/source/forward_error_correction.h>   // for webrtc::ForwardErrorCorrection
+//#include <webrtc/modules/rtp_rtcp/source/ulpfec_generator.h>   // for webrtc::UlpfecGenerator
+#include <webrtc/modules/rtp_rtcp/include/flexfec_sender.h>   // for webrtc::FlexfecSender
+#include <webrtc/modules/rtp_rtcp/include/flexfec_receiver.h>   // for webrtc::FlexfecReceiver
+
 using namespace webrtc;
 
 #include "encode.h"
@@ -14,7 +20,7 @@ using namespace std;
 
 #include <stdio.h>
 
-typedef function<void(uint8_t* rtp_packet, size_t rtp_packet_len)> RtpPacketSink;
+typedef function<void(const uint8_t* rtp_packet, size_t rtp_packet_len)> RtpPacketSink;
 
 class RtpStreamGenerator
 {
@@ -26,13 +32,24 @@ class RtpStreamGenerator
         , rtp_packer_(NULL)
         , nalu_fp_(NULL)
         , rtp_packet_sink_(rtp_packet_sink)
+        , fec_generator_()
     {
         nalu_fp_ = fopen(es_file, "wb");
 
         encoder_ = avc_encoder_new(640, 480, 15, 256000, RtpStreamGenerator::on_nalu_data, this);
         image_ = i420_image_alloc(640, 480);
         avc_encoder_init(encoder_);
-        rtp_packer_ = h264_rtp_packer_new(96, 1, 12346, 1000, RtpStreamGenerator::on_rtp_packet, this);
+        rtp_packer_ = h264_rtp_packer_new(96, 1, 12345, 1000, RtpStreamGenerator::on_rtp_packet, this);
+
+        vector<RtpExtension> empty_rtp_extensions;
+        fec_generator_.reset(new FlexfecSender(97, 12346, 12345, empty_rtp_extensions, Clock::GetRealTimeClock()));
+
+        FecProtectionParams fec_param;
+        fec_param.fec_rate = 16;
+        // fec group size
+        fec_param.max_fec_frames = 15;
+        fec_param.fec_mask_type = kFecMaskBursty;
+        fec_generator_->SetFecParameters(fec_param);
 
         return;
     }
@@ -71,39 +88,52 @@ class RtpStreamGenerator
 
     void handleRtpPacket(const unsigned char *rtp_packet, unsigned len)
     {
-        // TODO: add fec
-
         rtp_packet_sink_((uint8_t*)rtp_packet, (size_t)len);
+
+        RtpPacketToSend rtp_packet_tosend(nullptr);
+        rtp_packet_tosend.Parse(rtp_packet, len);
+
+        fec_generator_->AddRtpPacketAndGenerateFec(rtp_packet_tosend);
+        if (fec_generator_->FecAvailable())
+        {
+            vector<unique_ptr<RtpPacketToSend>> packets = fec_generator_->GetFecPackets();
+            for (auto& packet : packets)
+            {
+                rtp_packet_sink_(packet->data(), packet->size());
+            }
+        }
 
         return;
     }
         
   private:
-        static void on_nalu_data(void* nalu, unsigned len, int is_last, void* userdata)
-        {
-            RtpStreamGenerator* thiz = (RtpStreamGenerator*)userdata;
-            thiz->handleNLAU(nalu, len, is_last);
-        }
-        
-        static void on_rtp_packet(const unsigned char *rtp_packet, unsigned len, void *userdata)
-        {
-            RtpStreamGenerator* thiz = (RtpStreamGenerator*)userdata;
-            thiz->handleRtpPacket(rtp_packet, len);
-        }
+    static void on_nalu_data(void* nalu, unsigned len, int is_last, void* userdata)
+    {
+        RtpStreamGenerator* thiz = (RtpStreamGenerator*)userdata;
+        thiz->handleNLAU(nalu, len, is_last);
+    }
+    
+    static void on_rtp_packet(const unsigned char *rtp_packet, unsigned len, void *userdata)
+    {
+        RtpStreamGenerator* thiz = (RtpStreamGenerator*)userdata;
+        thiz->handleRtpPacket(rtp_packet, len);
+    }
 
-        avc_encoder_t* encoder_;
-        i420_image_t *image_;
+    avc_encoder_t* encoder_;
+    i420_image_t *image_;
 
-        unsigned ts_ms_;
+    unsigned ts_ms_;
 
-        h264_rtp_packer_t* rtp_packer_;
-        FILE *nalu_fp_;
+    h264_rtp_packer_t* rtp_packer_;
+    FILE *nalu_fp_;
 
-        RtpPacketSink rtp_packet_sink_;
+    RtpPacketSink rtp_packet_sink_;
+
+    unique_ptr<FlexfecSender> fec_generator_;
 };
 
 
-class RtpHandler : public RtpData, public RtpFeedback
+class RtpHandler : public RtpData, public RtpFeedback, public RecoveredPacketReceiver
 {
   public:
     RtpHandler(const char* file)
@@ -131,6 +161,8 @@ class RtpHandler : public RtpData, public RtpFeedback
 
         rtp_receiver_.reset(RtpReceiver::CreateVideoReceiver(Clock::GetRealTimeClock(), this, this, &rtp_payload_registry_));
         rtp_head_parser_.reset(RtpHeaderParser::Create());
+
+        fec_receiver_.reset(new FlexfecReceiver(12346, 12345, this));
     }
 
     virtual ~RtpHandler()
@@ -138,26 +170,27 @@ class RtpHandler : public RtpData, public RtpFeedback
         fclose(fp_);
     }
 
-    void receiveRtp(uint8_t* rtp_packet, size_t rtp_packet_len)
+    void receiveRtp(const uint8_t* rtp_packet, size_t rtp_packet_len)
     {
-        // TODO: add fec
-
-        RTPHeader rtp_head;
-        if (!rtp_head_parser_->Parse(rtp_packet, rtp_packet_len, &rtp_head))
+        RtpPacketReceived received_packet;
+        if (!received_packet.Parse(rtp_packet, rtp_packet_len))
         {
             return;
         }
 
-        rtp_head.payload_type_frequency = 90000;
+        fec_receiver_->OnRtpPacket(received_packet);
 
-        uint8_t* payload = rtp_packet + rtp_head.headerLength;
-        size_t payload_len = rtp_packet_len - rtp_head.headerLength;
-        PayloadUnion payload_spec;
-        if (rtp_payload_registry_.GetPayloadSpecifics(rtp_head.payloadType, &payload_spec))
+        // check if it's normal rtp
+        if (received_packet.Ssrc() != 12345)
         {
-            rtp_receiver_->IncomingRtpPacket(rtp_head, payload, payload_len, payload_spec, true);
+            return;
         }
-        
+
+        received_packet.set_payload_type_frequency(90000);
+        RTPHeader rtp_head;
+        received_packet.GetHeader(&rtp_head);
+        processMediaRtp(rtp_head, rtp_packet, rtp_packet_len);
+
         return;
     }
 
@@ -171,9 +204,13 @@ class RtpHandler : public RtpData, public RtpFeedback
         return 0;
     }
 
+    // webrtc::RtpData::OnRecoveredPacket()
+    // webrtc::RecoveredPacketReceiver::OnRecoveredPacket()
     virtual 
     bool OnRecoveredPacket(const uint8_t* packet, size_t packet_length)
     {
+        receiveRtp(packet, packet_length);
+
         return true;
     }
 
@@ -198,11 +235,27 @@ class RtpHandler : public RtpData, public RtpFeedback
     }
 
   private:
-        FILE* fp_;
+    void processMediaRtp(const RTPHeader& rtp_head, const uint8_t* rtp_packet, size_t rtp_packet_len)
+    {
+        const uint8_t* payload = rtp_packet + rtp_head.headerLength;
+        size_t payload_len = rtp_packet_len - rtp_head.headerLength;
+        PayloadUnion payload_spec;
+        if (rtp_payload_registry_.GetPayloadSpecifics(rtp_head.payloadType, &payload_spec))
+        {
+            rtp_receiver_->IncomingRtpPacket(rtp_head, payload, payload_len, payload_spec, true);
+        }
 
-        RTPPayloadRegistry rtp_payload_registry_;
-        unique_ptr<RtpReceiver> rtp_receiver_;
-        unique_ptr<RtpHeaderParser> rtp_head_parser_;
+        return;
+    }    
+
+  private:
+    FILE* fp_;
+
+    RTPPayloadRegistry rtp_payload_registry_;
+    unique_ptr<RtpReceiver> rtp_receiver_;
+    unique_ptr<RtpHeaderParser> rtp_head_parser_;
+
+    unique_ptr<FlexfecReceiver> fec_receiver_;
 };
 
 
