@@ -1,7 +1,13 @@
 
 #include "encode.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <x264.h>
+#ifdef __cplusplus
+}
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,7 +29,7 @@ struct avc_encoder
     int gop_size;
     int gop_frame_count;
 
-    void (*on_nalu_data)(void* nalu, unsigned len, int is_last, void* userdata);
+    void (*on_nalu_data)(uint8_t* nalu, unsigned len, int is_last, void* userdata);
     void *userdata;
 };
 
@@ -36,10 +42,10 @@ i420_image_t* i420_image_alloc(int width, int height)
 
     image->width = width;
     image->height = height;
-    image->data = &image[1];
+    image->data = (uint8_t*)&image[1];
     image->y_ptr = image->data;
-    image->u_ptr = (char*)image->y_ptr + width * height;
-    image->v_ptr = (char*)image->u_ptr + ((width * height)>>2);
+    image->u_ptr = image->y_ptr + width * height;
+    image->v_ptr = image->u_ptr + ((width * height)>>2);
 
     return image;
 }
@@ -53,18 +59,18 @@ void i420_image_free(i420_image_t* image)
 void fill_image_i420(i420_image_t* image, int index)
 {
     int x, y;
-    char* u_ptr;
-    char* v_ptr;
+    uint8_t* u_ptr;
+    uint8_t* v_ptr;
     int uv_stride = image->width / 2;
-    char* line;
+    uint8_t* line;
 
     /* Y */
-    line = (char*)image->y_ptr;
+    line = image->y_ptr;
     for (y = 0; y < image->height; y++)
     {
         for (x = 0; x < image->width; x++)
         {
-            line[x] = (unsigned char)(x + y + index * 3);
+            line[x] = (uint8_t)(x + y + index * 3);
         }
         line += image->width;
     }
@@ -76,8 +82,8 @@ void fill_image_i420(i420_image_t* image, int index)
     {
         for (x = 0; x < uv_stride; x++)
         {
-            u_ptr[x] = (char)(128 + y + index * 2);
-            v_ptr[x] = (char)(64 + x + index * 5);
+            u_ptr[x] = (uint8_t)(128 + y + index * 2);
+            v_ptr[x] = (uint8_t)(64 + x + index * 5);
         }
         u_ptr += uv_stride;
         v_ptr += uv_stride;
@@ -89,12 +95,12 @@ void fill_image_i420(i420_image_t* image, int index)
 avc_encoder_t* avc_encoder_new
 (
     int width, int height, int fps, int bitrate,
-    void (*on_nalu_data)(void* frame, unsigned len, int is_last, void* userdata), void *userdata
+    void (*on_nalu_data)(uint8_t* frame, unsigned len, int is_last, void* userdata), void *userdata
 )
 {
     avc_encoder_t* encoder;
 
-    encoder = malloc(sizeof(*encoder));
+    encoder = (avc_encoder_t*)malloc(sizeof(*encoder));
     memset(encoder, 0, sizeof(*encoder));
     encoder->width = width;
     encoder->height = height;
@@ -241,7 +247,7 @@ int avc_encoder_encode(avc_encoder_t* encoder, i420_image_t* image, int pts, int
 
             for (i = 0; i < nalu_count; ++i)
             {
-                encoder->on_nalu_data(p_nals[i].p_payload, (p_nals[i].i_payload), ((i+1) == nalu_count), encoder->userdata);
+                encoder->on_nalu_data((uint8_t*)p_nals[i].p_payload, (p_nals[i].i_payload), ((i+1) == nalu_count), encoder->userdata);
             }
         }
     }
@@ -264,7 +270,7 @@ void avc_encoder_destroy(avc_encoder_t* encoder)
 
 #ifdef TEST_ENCODE
 
-void on_nalu_data(void* nalu, unsigned len, int is_last, void* userdata)
+void on_nalu_data(uint8_t* nalu, unsigned len, int is_last, void* userdata)
 {
     FILE* fp = (FILE*)userdata;
     fwrite(nalu, 1, len, fp);

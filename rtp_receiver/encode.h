@@ -8,10 +8,10 @@ typedef struct i420_image
 {
     int width;
     int height;
-    void* data;
-    void* y_ptr;
-    void* u_ptr;
-    void* v_ptr;
+    uint8_t* data;
+    uint8_t* y_ptr;
+    uint8_t* u_ptr;
+    uint8_t* v_ptr;
 }i420_image_t;
 
 typedef struct avc_encoder avc_encoder_t;
@@ -29,7 +29,7 @@ void fill_image_i420(i420_image_t* image, int index);
 avc_encoder_t* avc_encoder_new
 (
     int width, int height, int fps, int bitrate,
-    void (*on_nalu_data)(void* nalu, unsigned len, int is_last, void* userdata), void *userdata
+    void (*on_nalu_data)(uint8_t* nalu, unsigned len, int is_last, void* userdata), void *userdata
 );
 
 int avc_encoder_init(avc_encoder_t* encoder);

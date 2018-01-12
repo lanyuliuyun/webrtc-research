@@ -77,7 +77,7 @@ class RtpStreamGenerator
         return;
     }
 
-    void handleNLAU(void* nalu, unsigned len, int is_last)
+    void handleNLAU(uint8_t* nalu, unsigned len, int is_last)
     {
         fwrite(nalu, 1, len, nalu_fp_);
         h264_rtp_packer_pack(rtp_packer_, (unsigned char *)nalu, len, ts_ms_, is_last);
@@ -107,7 +107,7 @@ class RtpStreamGenerator
     }
         
   private:
-    static void on_nalu_data(void* nalu, unsigned len, int is_last, void* userdata)
+    static void on_nalu_data(uint8_t* nalu, unsigned len, int is_last, void* userdata)
     {
         RtpStreamGenerator* thiz = (RtpStreamGenerator*)userdata;
         thiz->handleNLAU(nalu, len, is_last);

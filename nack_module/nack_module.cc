@@ -3,12 +3,10 @@
 using namespace webrtc;
 
 #include <iostream>
-using std::cout;
-using std::endl;
 
-#include <windows.h>
 #include <stdlib.h>
 #include <time.h>
+#include <unistd.h>
 
 class NackTester : public NackSender, public KeyFrameRequestSender
 {
@@ -26,21 +24,21 @@ NackTester()
 
 virtual void SendNack(const std::vector<uint16_t>& sequence_numbers)
 {
-    cout << "send nack packet:";
+    std::cout << "send nack packet:";
     auto iter = sequence_numbers.begin();
     auto iter_end = sequence_numbers.end();
     for (; iter != iter_end; ++iter)
     {
-        cout << " " << *iter;
+        std::cout << " " << *iter;
     }
-    cout << endl;
-    
+    std::cout << std::endl;
+
     return;
 }
 
 virtual void RequestKeyFrame(void)
 {
-    cout << "request keyframe" << endl;
+    std::cout << "request keyframe" << std::endl;
     
     return;
 }
@@ -55,7 +53,7 @@ int gen_packet(VCMPacket *packet)
     
     if ((rand() % 100) > 85)
     {
-        cout << "packet lost: " << sn << endl;
+        std::cout << "packet lost: " << sn << std::endl;
         return -1;
     }
     
@@ -64,7 +62,7 @@ int gen_packet(VCMPacket *packet)
     return 0;
 }
 
-int main(int argc, char *argv)
+int main(int argc, char *argv[])
 {
     NackTester *tester;
     NackModule *nack_module;
@@ -91,7 +89,7 @@ int main(int argc, char *argv)
             }
         }
 
-        Sleep(30 + (rand() % 5));
+        usleep((30 + (rand() % 5))*1000);
     }
     
     delete nack_module;
