@@ -41,8 +41,8 @@ RTC_NORETURN void rtc_FatalMessage(const char* file, int line, const char* msg);
 // C++ version.
 
 #include <string>
+#include <string_view>
 
-#include "absl/strings/string_view.h"
 #include "rtc_base/numerics/safe_compare.h"
 #include "rtc_base/system/inline.h"
 
@@ -159,8 +159,8 @@ inline Val<CheckArgType::kStdString, const std::string*> MakeVal(
     const std::string& x) {
   return {&x};
 }
-inline Val<CheckArgType::kStringView, const absl::string_view*> MakeVal(
-    const absl::string_view& x) {
+inline Val<CheckArgType::kStringView, const std::string_view*> MakeVal(
+    const std::string_view& x) {
   return {&x};
 }
 

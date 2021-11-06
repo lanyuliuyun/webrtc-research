@@ -16,11 +16,21 @@
 #include <type_traits>
 #include <utility>
 
-#include "absl/strings/match.h"
 #include "api/audio_codecs/audio_decoder.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/logging.h"
 #include "rtc_base/strings/audio_format_to_string.h"
+
+#include <string.h>
+#if defined(WEBRTC_WIN)
+#define strncasecmp _strnicmp
+#endif
+
+static bool EqualsIgnoreCase(const std::string &piece1, const std::string_view &piece2)
+{
+  return (piece1.size() == piece2.size() &&
+          0 == ::strncasecmp(piece1.data(), piece2.data(), piece1.size()));
+}
 
 namespace webrtc {
 
@@ -71,7 +81,7 @@ AudioDecoder* DecoderDatabase::DecoderInfo::GetDecoder() const {
 }
 
 bool DecoderDatabase::DecoderInfo::IsType(const char* name) const {
-  return absl::EqualsIgnoreCase(audio_format_.name, name);
+  return ::EqualsIgnoreCase(audio_format_.name, name);
 }
 
 bool DecoderDatabase::DecoderInfo::IsType(const std::string& name) const {
@@ -80,7 +90,7 @@ bool DecoderDatabase::DecoderInfo::IsType(const std::string& name) const {
 
 absl::optional<DecoderDatabase::DecoderInfo::CngDecoder>
 DecoderDatabase::DecoderInfo::CngDecoder::Create(const SdpAudioFormat& format) {
-  if (absl::EqualsIgnoreCase(format.name, "CN")) {
+  if (::EqualsIgnoreCase(format.name, "CN")) {
     // CN has a 1:1 RTP clock rate to sample rate ratio.
     const int sample_rate_hz = format.clockrate_hz;
     RTC_DCHECK(sample_rate_hz == 8000 || sample_rate_hz == 16000 ||
@@ -93,11 +103,11 @@ DecoderDatabase::DecoderInfo::CngDecoder::Create(const SdpAudioFormat& format) {
 
 DecoderDatabase::DecoderInfo::Subtype
 DecoderDatabase::DecoderInfo::SubtypeFromFormat(const SdpAudioFormat& format) {
-  if (absl::EqualsIgnoreCase(format.name, "CN")) {
+  if (::EqualsIgnoreCase(format.name, "CN")) {
     return Subtype::kComfortNoise;
-  } else if (absl::EqualsIgnoreCase(format.name, "telephone-event")) {
+  } else if (::EqualsIgnoreCase(format.name, "telephone-event")) {
     return Subtype::kDtmf;
-  } else if (absl::EqualsIgnoreCase(format.name, "red")) {
+  } else if (::EqualsIgnoreCase(format.name, "red")) {
     return Subtype::kRed;
   }
 

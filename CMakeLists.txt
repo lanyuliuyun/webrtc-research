@@ -12,8 +12,9 @@ if (MSVC)
     add_compile_options(
         /utf-8
         /DWIN32_LEAN_AND_MEAN
-        /DWEBRTC_WIN
+        /DWEBRTC_WIN=1
         /DNOMINMAX
+        /std:c++17
     )
 endif()
 

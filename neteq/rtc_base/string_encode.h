@@ -16,7 +16,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "absl/types/optional.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/string_to_number.h"
 

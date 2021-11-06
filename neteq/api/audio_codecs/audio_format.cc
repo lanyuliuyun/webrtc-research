@@ -12,19 +12,28 @@
 
 #include <utility>
 
-#include "absl/strings/match.h"
+#include <string.h>
+#if defined(WEBRTC_WIN)
+#define strncasecmp _strnicmp
+#endif
+
+static bool EqualsIgnoreCase(const std::string &piece1, const std::string_view &piece2)
+{
+  return (piece1.size() == piece2.size() &&
+          0 == ::strncasecmp(piece1.data(), piece2.data(), piece1.size()));
+}
 
 namespace webrtc {
 
 SdpAudioFormat::SdpAudioFormat(const SdpAudioFormat&) = default;
 SdpAudioFormat::SdpAudioFormat(SdpAudioFormat&&) = default;
 
-SdpAudioFormat::SdpAudioFormat(absl::string_view name,
+SdpAudioFormat::SdpAudioFormat(std::string_view name,
                                int clockrate_hz,
                                size_t num_channels)
     : name(name), clockrate_hz(clockrate_hz), num_channels(num_channels) {}
 
-SdpAudioFormat::SdpAudioFormat(absl::string_view name,
+SdpAudioFormat::SdpAudioFormat(std::string_view name,
                                int clockrate_hz,
                                size_t num_channels,
                                const Parameters& param)
@@ -33,7 +42,7 @@ SdpAudioFormat::SdpAudioFormat(absl::string_view name,
       num_channels(num_channels),
       parameters(param) {}
 
-SdpAudioFormat::SdpAudioFormat(absl::string_view name,
+SdpAudioFormat::SdpAudioFormat(std::string_view name,
                                int clockrate_hz,
                                size_t num_channels,
                                Parameters&& param)
@@ -43,7 +52,7 @@ SdpAudioFormat::SdpAudioFormat(absl::string_view name,
       parameters(std::move(param)) {}
 
 bool SdpAudioFormat::Matches(const SdpAudioFormat& o) const {
-  return absl::EqualsIgnoreCase(name, o.name) &&
+  return ::EqualsIgnoreCase(name, o.name) &&
          clockrate_hz == o.clockrate_hz && num_channels == o.num_channels;
 }
 
@@ -52,7 +61,7 @@ SdpAudioFormat& SdpAudioFormat::operator=(const SdpAudioFormat&) = default;
 SdpAudioFormat& SdpAudioFormat::operator=(SdpAudioFormat&&) = default;
 
 bool operator==(const SdpAudioFormat& a, const SdpAudioFormat& b) {
-  return absl::EqualsIgnoreCase(a.name, b.name) &&
+  return ::EqualsIgnoreCase(a.name, b.name) &&
          a.clockrate_hz == b.clockrate_hz && a.num_channels == b.num_channels &&
          a.parameters == b.parameters;
 }

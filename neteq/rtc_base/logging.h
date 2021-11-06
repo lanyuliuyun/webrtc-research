@@ -50,8 +50,8 @@
 #include <sstream>  // no-presubmit-check TODO(webrtc:8982)
 #include <string>
 #include <utility>
+#include <string_view>
 
-#include "absl/strings/string_view.h"
 #include "rtc_base/constructor_magic.h"
 #include "rtc_base/deprecation.h"
 #include "rtc_base/strings/string_builder.h"
@@ -230,8 +230,8 @@ inline Val<LogArgType::kStdString, const std::string*> MakeVal(
     const std::string& x) {
   return {&x};
 }
-inline Val<LogArgType::kStringView, const absl::string_view*> MakeVal(
-    const absl::string_view& x) {
+inline Val<LogArgType::kStringView, const std::string_view*> MakeVal(
+    const std::string_view& x) {
   return {&x};
 }
 
@@ -569,7 +569,7 @@ inline bool LogCheckLevel(LoggingSeverity sev) {
 #ifdef WEBRTC_ANDROID
 
 namespace webrtc_logging_impl {
-// TODO(kwiberg): Replace these with absl::string_view.
+// TODO(kwiberg): Replace these with std::string_view.
 inline const char* AdaptString(const char* str) {
   return str;
 }
