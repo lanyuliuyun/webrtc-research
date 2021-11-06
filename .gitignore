@@ -2,3 +2,11 @@ Debug/
 *.VC.*
 */Debug/
 .vs/
+CMakeFiles
+x64
+*.vc*
+*.sln
+cmake_install.cmake
+CMakeCache.txt
+build/lib
+build/neteq
