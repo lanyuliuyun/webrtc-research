@@ -6,7 +6,6 @@ set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/lib)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
 
 set(WEBRTC_ROOT "E:/04.OpenSource/webrtc_agora")
-set(ABSEIL_ROOT "E:/04.OpenSource/abseil-cpp-master")
 set(LIBOPUS_ROOT "D:/01.project/ezrtc/v1.5-dev/dep/opus-1.3.1")
 
 if (MSVC)
