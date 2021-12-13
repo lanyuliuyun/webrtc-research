@@ -39,23 +39,18 @@ set(api_SRCS
 set(signal_processing_SRCS
     common_audio/signal_processing/auto_correlation.c
     common_audio/signal_processing/auto_corr_to_refl_coef.c
-    common_audio/signal_processing/complex_bit_reverse.c
     common_audio/signal_processing/complex_fft.c
     common_audio/signal_processing/copy_set_operations.c
-    common_audio/signal_processing/cross_correlation.c
     common_audio/signal_processing/division_operations.c
     common_audio/signal_processing/dot_product_with_scale.cc
-    common_audio/signal_processing/downsample_fast.c
     common_audio/signal_processing/energy.c
     common_audio/signal_processing/filter_ar.c
-    common_audio/signal_processing/filter_ar_fast_q12.c
     common_audio/signal_processing/filter_ma_fast_q12.c
     common_audio/signal_processing/get_hanning_window.c
     common_audio/signal_processing/get_scaling_square.c
     common_audio/signal_processing/ilbc_specific_functions.c
     common_audio/signal_processing/levinson_durbin.c
     common_audio/signal_processing/lpc_to_refl_coef.c
-    common_audio/signal_processing/min_max_operations.c
     common_audio/signal_processing/randomization_functions.c
     common_audio/signal_processing/real_fft.c
     common_audio/signal_processing/refl_coef_to_lpc.c
@@ -71,10 +66,33 @@ set(signal_processing_SRCS
     common_audio/signal_processing/sqrt_of_one_minus_x_squared.c
     common_audio/signal_processing/vector_scaling_operations.c
 )
+if (MSVC)
+list(APPEND signal_processing_SRCS
+    common_audio/signal_processing/complex_bit_reverse.c
+    common_audio/signal_processing/cross_correlation.c
+    common_audio/signal_processing/downsample_fast.c
+    common_audio/signal_processing/filter_ar_fast_q12.c
+    common_audio/signal_processing/min_max_operations.c
+)
+elseif (ANDROID OR APPLE)
+list(APPEND signal_processing_SRCS
+    common_audio/signal_processing/complex_bit_reverse_arm.S
+    common_audio/signal_processing/cross_correlation_neon.c
+    common_audio/signal_processing/downsample_fast_neon.c
+    common_audio/signal_processing/filter_ar_fast_q12_armv7.S
+    common_audio/signal_processing/min_max_operations_neon.c
+)
+endif()
 
+if (MSVC)
 set(spl_sqrt_floor_SRCS
     common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.c
 )
+elseif (ANDROID OR APPLE)
+set(spl_sqrt_floor_SRCS
+    common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor_arm.S
+)
+endif()
 
 set(vad_SRCS
     common_audio/vad/vad.cc
