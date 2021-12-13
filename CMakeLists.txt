@@ -20,6 +20,19 @@ if (MSVC)
         /std:c++17
         /DWEBRTC_USE_BUILTIN_OPUS=1
     )
+elseif (ANDROID)
+    add_compile_options(
+        /DWEBRTC_POSIX=1
+        /DWEBRTC_HAS_NEON=1
+        /DWEBRTC_USE_BUILTIN_OPUS=1
+    )
+elseif (APPLE)
+    add_compile_options(
+        /DWEBRTC_POSIX=1
+        /DWEBRTC_MAC=1
+        /DWEBRTC_HAS_NEON=1
+        /DWEBRTC_USE_BUILTIN_OPUS=1
+    )
 endif()
 
 include_directories(
