@@ -22,7 +22,6 @@ set(rtc_base_SRCS
     rtc_base/synchronization/sequence_checker.cc
     rtc_base/synchronization/yield_policy.cc
 )
-add_library(rtc_base ${rtc_base_SRCS})
 
 set(api_SRCS
     api/rtp_headers.cc
@@ -31,9 +30,11 @@ set(api_SRCS
     api/audio_codecs/audio_decoder.cc
     api/audio_codecs/audio_encoder.cc
     api/audio_codecs/audio_format.cc
+    api/audio_codecs/builtin_audio_decoder_factory.cc
+    api/audio_codecs/opus/audio_decoder_multi_channel_opus.cc
+    api/audio_codecs/opus/audio_decoder_opus.cc
     api/task_queue/task_queue_base.cc
 )
-add_library(api ${api_SRCS})
 
 set(signal_processing_SRCS
     common_audio/signal_processing/auto_correlation.c
@@ -70,12 +71,10 @@ set(signal_processing_SRCS
     common_audio/signal_processing/sqrt_of_one_minus_x_squared.c
     common_audio/signal_processing/vector_scaling_operations.c
 )
-add_library(signal_processing ${signal_processing_SRCS})
 
 set(spl_sqrt_floor_SRCS
     common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.c
 )
-add_library(spl_sqrt_floor ${spl_sqrt_floor_SRCS})
 
 set(vad_SRCS
     common_audio/vad/vad.cc
@@ -85,20 +84,24 @@ set(vad_SRCS
     common_audio/vad/vad_sp.c
     common_audio/vad/webrtc_vad.c
 )
-add_library(vad ${vad_SRCS})
 
 set(cng_SRCS
     modules/audio_coding/codecs/cng/audio_encoder_cng.cc
     modules/audio_coding/codecs/cng/webrtc_cng.cc
 )
-add_library(cng ${cng_SRCS})
+
+set(codec_opus_SRCS
+    modules/audio_coding/codecs/opus/audio_coder_opus_common.cc
+    modules/audio_coding/codecs/opus/audio_decoder_multi_channel_opus_impl.cc
+    modules/audio_coding/codecs/opus/audio_decoder_opus.cc
+    modules/audio_coding/codecs/opus/opus_interface.c
+)
 
 set(system_wrappers_SRCS
     system_wrappers/source/cpu_features.cc
     system_wrappers/source/field_trial.cc
     system_wrappers/source/metrics.cc
 )
-add_library(system_wrappers ${system_wrappers_SRCS})
 
 set(neteq_SRCS
     accelerate.cc
@@ -135,14 +138,27 @@ set(neteq_SRCS
     time_stretch.cc
     timestamp_scaler.cc
 )
-add_library(neteq SHARED ${neteq_SRCS})
+
+add_library(rtc_base ${rtc_base_SRCS})
+add_library(api ${api_SRCS})
+add_library(signal_processing ${signal_processing_SRCS})
+add_library(spl_sqrt_floor ${spl_sqrt_floor_SRCS})
+add_library(vad ${vad_SRCS})
+add_library(cng ${cng_SRCS})
+add_library(codec_opus ${codec_opus_SRCS})
+add_library(system_wrappers ${system_wrappers_SRCS})
+
+add_library(neteq SHARED 
+    ${neteq_SRCS}
+    ${rtc_base_SRCS}
+    ${api_SRCS}
+    ${signal_processing_SRCS}
+    ${spl_sqrt_floor_SRCS}
+    ${vad_SRCS}
+    ${cng_SRCS}
+    ${codec_opus_SRCS}
+    ${system_wrappers_SRCS})
 target_link_libraries(neteq
-    rtc_base
-    api
-    signal_processing
-    spl_sqrt_floor
-    vad
-    cng
-    system_wrappers
     Winmm
+    opus
 )

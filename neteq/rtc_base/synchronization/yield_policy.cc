@@ -9,11 +9,9 @@
  */
 #include "rtc_base/synchronization/yield_policy.h"
 
-#include "absl/base/attributes.h"
-
 namespace rtc {
 namespace {
-ABSL_CONST_INIT thread_local YieldInterface* current_yield_policy = nullptr;
+thread_local YieldInterface* current_yield_policy = nullptr;
 }
 
 ScopedYieldPolicy::ScopedYieldPolicy(YieldInterface* policy)
