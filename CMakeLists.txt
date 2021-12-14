@@ -5,7 +5,7 @@ project(webrtc-research)
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/lib)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
 
-set(LIBOPUS_ROOT "D:/01.project/ezrtc/v1.5-dev/dep/opus-1.3.1")
+set(HIKOPUS_ROOT "D:/01.project/ezrtc/v1.5-dev/dep/opus_codec")
 
 if (MSVC)
     add_compile_options(
@@ -41,13 +41,12 @@ elseif (UNIX)
 endif()
 
 include_directories(
-    ${ABSEIL_ROOT}
-    ${PROJECT_SOURCE_DIR}
-    ${LIBOPUS_ROOT}/include
+    ${HIKOPUS_ROOT}/include
 )
 
 link_directories(
-    ${LIBOPUS_ROOT}/lib
+    ${HIKOPUS_ROOT}/lib
 )
 
 add_subdirectory(neteq)
+add_subdirectory(neteq_test)

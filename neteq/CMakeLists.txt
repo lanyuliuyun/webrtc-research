@@ -2,7 +2,7 @@
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}abseil-cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/abseil-cpp
 )
 
 set(rtc_base_SRCS
@@ -158,16 +158,8 @@ set(neteq_SRCS
     timestamp_scaler.cc
 )
 
-add_library(rtc_base ${rtc_base_SRCS})
-add_library(api ${api_SRCS})
-add_library(signal_processing ${signal_processing_SRCS})
-add_library(spl_sqrt_floor ${spl_sqrt_floor_SRCS})
-add_library(vad ${vad_SRCS})
-add_library(cng ${cng_SRCS})
-add_library(codec_opus ${codec_opus_SRCS})
-add_library(system_wrappers ${system_wrappers_SRCS})
 
-add_library(neteq SHARED 
+add_library(neteq 
     ${neteq_SRCS}
     ${rtc_base_SRCS}
     ${api_SRCS}
@@ -177,13 +169,4 @@ add_library(neteq SHARED
     ${cng_SRCS}
     ${codec_opus_SRCS}
     ${system_wrappers_SRCS})
-if (MSVC)
-target_link_libraries(neteq
-    Winmm
-    opus
-)
-elseif (UNIX)
-target_link_libraries(neteq
-    pthread
-)
-endif()
+

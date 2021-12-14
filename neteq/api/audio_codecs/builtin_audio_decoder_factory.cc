@@ -46,7 +46,7 @@ struct NotAdvertised {
 rtc::scoped_refptr<AudioDecoderFactory> CreateBuiltinAudioDecoderFactory() {
   return CreateAudioDecoderFactory<
 #if WEBRTC_USE_BUILTIN_OPUS
-      AudioDecoderOpus, NotAdvertised<AudioDecoderMultiChannelOpus>
+      AudioDecoderOpus
 #endif
     >();
 }
