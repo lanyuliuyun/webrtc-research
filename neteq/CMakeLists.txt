@@ -67,15 +67,7 @@ set(signal_processing_SRCS
     common_audio/signal_processing/sqrt_of_one_minus_x_squared.c
     common_audio/signal_processing/vector_scaling_operations.c
 )
-if (MSVC)
-list(APPEND signal_processing_SRCS
-    common_audio/signal_processing/complex_bit_reverse.c
-    common_audio/signal_processing/cross_correlation.c
-    common_audio/signal_processing/downsample_fast.c
-    common_audio/signal_processing/filter_ar_fast_q12.c
-    common_audio/signal_processing/min_max_operations.c
-)
-elseif (ANDROID OR APPLE)
+if (ANDROID OR APPLE)
 list(APPEND signal_processing_SRCS
     common_audio/signal_processing/complex_bit_reverse_arm.S
     common_audio/signal_processing/cross_correlation_neon.c
@@ -83,15 +75,23 @@ list(APPEND signal_processing_SRCS
     common_audio/signal_processing/filter_ar_fast_q12_armv7.S
     common_audio/signal_processing/min_max_operations_neon.c
 )
+elseif (MSVC OR UNIX)
+list(APPEND signal_processing_SRCS
+    common_audio/signal_processing/complex_bit_reverse.c
+    common_audio/signal_processing/cross_correlation.c
+    common_audio/signal_processing/downsample_fast.c
+    common_audio/signal_processing/filter_ar_fast_q12.c
+    common_audio/signal_processing/min_max_operations.c
+)
 endif()
 
-if (MSVC)
-set(spl_sqrt_floor_SRCS
-    common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.c
-)
-elseif (ANDROID OR APPLE)
+if (ANDROID OR APPLE)
 set(spl_sqrt_floor_SRCS
     common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor_arm.S
+)
+elseif (MSVC OR UNIX)
+set(spl_sqrt_floor_SRCS
+    common_audio/third_party/spl_sqrt_floor/spl_sqrt_floor.c
 )
 endif()
 
@@ -177,7 +177,13 @@ add_library(neteq SHARED
     ${cng_SRCS}
     ${codec_opus_SRCS}
     ${system_wrappers_SRCS})
+if (MSVC)
 target_link_libraries(neteq
     Winmm
     opus
 )
+elseif (UNIX)
+target_link_libraries(neteq
+    pthread
+)
+endif()
