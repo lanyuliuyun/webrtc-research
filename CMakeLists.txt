@@ -5,7 +5,6 @@ project(webrtc-research)
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/lib)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
 
-set(WEBRTC_ROOT "E:/04.OpenSource/webrtc_agora")
 set(LIBOPUS_ROOT "D:/01.project/ezrtc/v1.5-dev/dep/opus-1.3.1")
 
 if (MSVC)
@@ -21,6 +20,7 @@ if (MSVC)
     )
 elseif (ANDROID)
     add_compile_options(
+        /DWEBRTC_ANDROID=1
         /DWEBRTC_POSIX=1
         /DWEBRTC_HAS_NEON=1
         /DWEBRTC_USE_BUILTIN_OPUS=1
@@ -30,6 +30,12 @@ elseif (APPLE)
         /DWEBRTC_POSIX=1
         /DWEBRTC_MAC=1
         /DWEBRTC_HAS_NEON=1
+        /DWEBRTC_USE_BUILTIN_OPUS=1
+    )
+elseif (UNIX)
+    add_compile_options(
+        /DWEBRTC_LINUX=1
+        /DWEBRTC_POSIX=1
         /DWEBRTC_USE_BUILTIN_OPUS=1
     )
 endif()
