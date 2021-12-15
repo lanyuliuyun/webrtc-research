@@ -6,18 +6,65 @@
 #include "api/audio/audio_frame.h"
 
 #include "hik_opus.h"
+#include <windows.h>
 
 #include <stdio.h>
 #include <inttypes.h>
+#include <time.h>
 
-#ifdef WIN32
-	#include <winsock2.h>			/* for htons()/htonl() */
-#else
-	#include <arpa/inet.h>			/* for htons()/htonl() */
-#endif
+#include <bitset>
 
 extern "C" void *aligned_malloc(unsigned int size, unsigned int alignment);
 extern "C" void aligned_free(void *p);
+
+class PacketLost
+{
+public:
+    PacketLost()
+        : lost_percent_(0)
+        , packet_intv_(100)
+        , lost_bits_()
+    {
+        srand((unsigned)time(NULL));
+    }
+    ~PacketLost() {}
+
+    void Set(int percent)
+    {
+        lost_percent_ = percent;
+        UpdateLostBitmap();
+    }
+
+    bool Run()
+    {
+        bool lost = false;
+        packet_intv_--;
+        lost = lost_bits_[packet_intv_];
+
+        if (packet_intv_ == 0)
+        {
+            packet_intv_ = 100;
+            UpdateLostBitmap();
+        }
+
+        return lost;
+    }
+
+private:
+    void UpdateLostBitmap()
+    {
+        lost_bits_.reset();
+        for (int i = 0; i < lost_percent_; ++i)
+        {
+            int idx = rand() % 100;
+            lost_bits_.set(idx);
+        }
+    }
+
+    int lost_percent_;
+    int packet_intv_;
+    std::bitset<100> lost_bits_;
+};
 
 int main(int argc, char *argv[])
 {
@@ -31,6 +78,9 @@ int main(int argc, char *argv[])
     webrtc::SdpAudioFormat::Parameters empty_param;
     webrtc::SdpAudioFormat opus_audio_format("opus", 48000, 2, empty_param);
     neteq->RegisterPayloadType(105, opus_audio_format);
+    
+    PacketLost lost;
+    lost.Set(10);
 
     void *enc_handle;
     {
@@ -63,24 +113,27 @@ int main(int argc, char *argv[])
         int read_ret = fread(pcm_frames, 1, sizeof(pcm_frames), pcm_in_fp);
         if (read_ret < sizeof(pcm_frames)) { break; }
 
-        AUDIOENC_PROCESS_PARAM enc_buf;
-        memset(&enc_buf, 0, sizeof(enc_buf));
-        enc_buf.reserved[0] = 20 * 48;
-        enc_buf.in_buf = (U08*)pcm_frames;
-        enc_buf.out_buf = opus_packet;
-        HRESULT hik_ret = HIK_OPUSENC_Encode(enc_handle, &enc_buf);
+        if (!lost.Run())
+        {
+            AUDIOENC_PROCESS_PARAM enc_buf;
+            memset(&enc_buf, 0, sizeof(enc_buf));
+            enc_buf.reserved[0] = 20 * 48;
+            enc_buf.in_buf = (U08*)pcm_frames;
+            enc_buf.out_buf = opus_packet;
+            HRESULT hik_ret = HIK_OPUSENC_Encode(enc_handle, &enc_buf);
 
-        webrtc::RTPHeader rtp_head;
-        rtp_head.markerBit = true;
-        rtp_head.payloadType = 105;
-        rtp_head.payload_type_frequency = 480000;
-        rtp_head.sequenceNumber = rtp_sn;
-        rtp_head.timestamp = rtp_ts;
-        rtp_head.ssrc = 0x11223344;
+            webrtc::RTPHeader rtp_head;
+            rtp_head.markerBit = true;
+            rtp_head.payloadType = 105;
+            rtp_head.payload_type_frequency = 480000;
+            rtp_head.sequenceNumber = rtp_sn;
+            rtp_head.timestamp = rtp_ts;
+            rtp_head.ssrc = 0x11223344;
 
-        rtc::ArrayView<const uint8_t> rtp_play_load(enc_buf.out_buf, enc_buf.out_frame_size);
+            rtc::ArrayView<const uint8_t> rtp_play_load(enc_buf.out_buf, enc_buf.out_frame_size);
 
-        int neteq_ret = neteq->InsertPacket(rtp_head, rtp_play_load, recv_ts);
+            int neteq_ret = neteq->InsertPacket(rtp_head, rtp_play_load, recv_ts);
+        }
 
         webrtc::AudioFrame audio;
         bool audio_mute;
@@ -88,6 +141,7 @@ int main(int argc, char *argv[])
         if (ret == webrtc::NetEq::kOK)
         {
             fwrite(audio.data(), 2, (10*48), pcm_out_fp);
+            //printf("1-10ms audio, rtp-ts: %d\n", (int)audio.timestamp_);
         }
         else
         {
@@ -99,6 +153,7 @@ int main(int argc, char *argv[])
         if (ret == webrtc::NetEq::kOK)
         {
             fwrite(audio.data(), 2, (10*48), pcm_out_fp);
+            //printf("2-10ms audio, rtp-ts: %d\n", (int)audio.timestamp_);
         }
         else
         {

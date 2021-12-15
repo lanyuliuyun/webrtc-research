@@ -7,7 +7,6 @@ include_directories(
 add_executable(neteq_test neteq_test.cpp)
 target_link_libraries(neteq_test
     neteq
-    Ws2_32
     opus_1.0.3_win32
     Winmm
 )
