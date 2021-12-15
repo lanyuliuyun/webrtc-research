@@ -97,7 +97,7 @@ bool ParseArg(va_list* args, const CheckArgType** fmt, std::string* s) {
       s->append(*va_arg(*args, const std::string*));
       break;
     case CheckArgType::kStringView: {
-      const std::string_view sv = *va_arg(*args, const std::string_view*);
+      const absl::string_view sv = *va_arg(*args, const absl::string_view*);
       s->append(sv.data(), sv.size());
       break;
     }

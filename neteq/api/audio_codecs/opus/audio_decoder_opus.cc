@@ -18,17 +18,6 @@
 #include "absl/strings/match.h"
 #include "modules/audio_coding/codecs/opus/audio_decoder_opus.h"
 
-#include <string.h>
-#if defined(WEBRTC_WIN)
-#define strncasecmp _strnicmp
-#endif
-
-static bool EqualsIgnoreCase(const std::string &piece1, const std::string_view &piece2)
-{
-  return (piece1.size() == piece2.size() &&
-          0 == ::strncasecmp(piece1.data(), piece2.data(), piece1.size()));
-}
-
 namespace webrtc {
 
 absl::optional<AudioDecoderOpus::Config> AudioDecoderOpus::SdpToConfig(
@@ -46,7 +35,7 @@ absl::optional<AudioDecoderOpus::Config> AudioDecoderOpus::SdpToConfig(
     }
     return 1;  // Default to mono.
   }();
-  if (::EqualsIgnoreCase(format.name, "opus") &&
+  if (absl::EqualsIgnoreCase(format.name, "opus") &&
       format.clockrate_hz == 48000 && format.num_channels == 2 &&
       num_channels) {
     return Config{*num_channels};

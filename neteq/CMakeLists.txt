@@ -5,6 +5,15 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/abseil-cpp
 )
 
+set(abseil_SRCS
+    abseil-cpp/absl/strings/match.cc
+    abseil-cpp/absl/base/internal/throw_delegate.cc
+    abseil-cpp/absl/strings/internal/memutil.cc
+    abseil-cpp/absl/strings/ascii.cc
+    abseil-cpp/absl/types/bad_optional_access.cc
+    abseil-cpp/absl/types/optional.cc
+)
+
 set(rtc_base_SRCS
     rtc_base/checks.cc
     rtc_base/critical_section.cc
@@ -161,6 +170,7 @@ set(neteq_SRCS
 
 add_library(neteq 
     ${neteq_SRCS}
+    ${abseil_SRCS}
     ${rtc_base_SRCS}
     ${api_SRCS}
     ${signal_processing_SRCS}

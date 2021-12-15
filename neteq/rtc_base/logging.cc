@@ -540,7 +540,7 @@ void Log(const LogArgType* fmt, ...) {
         log_message.stream() << *va_arg(args, const std::string*);
         break;
       case LogArgType::kStringView:
-        log_message.stream() << *va_arg(args, const std::string_view*);
+        log_message.stream() << *va_arg(args, const absl::string_view*);
         break;
       case LogArgType::kVoidP:
         log_message.stream() << rtc::ToHex(

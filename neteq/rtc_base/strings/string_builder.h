@@ -14,8 +14,8 @@
 #include <cstdio>
 #include <string>
 #include <utility>
-#include <string_view>
 
+#include "absl/strings/string_view.h"
 #include "api/array_view.h"
 #include "rtc_base/string_encode.h"
 #include "rtc_base/string_utils.h"
@@ -90,13 +90,13 @@ class SimpleStringBuilder {
 class StringBuilder {
  public:
   StringBuilder() {}
-  explicit StringBuilder(std::string_view s) : str_(s) {}
+  explicit StringBuilder(absl::string_view s) : str_(s) {}
 
   // TODO(tommi): Support construction from StringBuilder?
   StringBuilder(const StringBuilder&) = delete;
   StringBuilder& operator=(const StringBuilder&) = delete;
 
-  StringBuilder& operator<<(const std::string_view str) {
+  StringBuilder& operator<<(const absl::string_view str) {
     str_.append(str.data(), str.length());
     return *this;
   }

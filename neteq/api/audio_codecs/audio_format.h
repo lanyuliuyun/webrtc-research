@@ -14,8 +14,8 @@
 #include <stddef.h>
 #include <map>
 #include <string>
-#include <string_view>
 
+#include "absl/strings/string_view.h"
 #include "rtc_base/checks.h"
 #include "rtc_base/system/rtc_export.h"
 
@@ -27,12 +27,12 @@ struct RTC_EXPORT SdpAudioFormat {
 
   SdpAudioFormat(const SdpAudioFormat&);
   SdpAudioFormat(SdpAudioFormat&&);
-  SdpAudioFormat(std::string_view name, int clockrate_hz, size_t num_channels);
-  SdpAudioFormat(std::string_view name,
+  SdpAudioFormat(absl::string_view name, int clockrate_hz, size_t num_channels);
+  SdpAudioFormat(absl::string_view name,
                  int clockrate_hz,
                  size_t num_channels,
                  const Parameters& param);
-  SdpAudioFormat(std::string_view name,
+  SdpAudioFormat(absl::string_view name,
                  int clockrate_hz,
                  size_t num_channels,
                  Parameters&& param);

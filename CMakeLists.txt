@@ -15,7 +15,6 @@ if (MSVC)
         /D_CRT_SECURE_NO_WARNINGS
         /DWEBRTC_WIN=1
         /DNOMINMAX
-        /std:c++17
         /DWEBRTC_USE_BUILTIN_OPUS=1
     )
 elseif (ANDROID)
