@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(USE_LIBOPUS_CODEEC) && USE_LIBOPUS_CODEEC
+#if !defined(USE_CUSTOM_LIBOPUS_CODEC) || !USE_CUSTOM_LIBOPUS_CODEC
 
 enum {
 #if WEBRTC_OPUS_SUPPORT_120MS_PTIME
@@ -694,39 +694,12 @@ int WebRtcOpus_PacketHasFec(const uint8_t* payload,
   return 0;
 }
 
-#else
-
-void *aligned_malloc(unsigned int size, unsigned int alignment)
-{
-    unsigned char *p_base, *p_use;
-    p_base = (unsigned char *)malloc(size + alignment + sizeof(unsigned char *));
-    if(p_base == NULL)
-    {
-        return NULL;
-    }
-    p_use = p_base + sizeof(unsigned char *);
-    while((unsigned long)p_use & (alignment - 1))
-    {
-        p_use ++;
-    }
-    *(unsigned char**)(p_use - sizeof(unsigned char *)) = p_base;
-    return p_use;
-}
-
-void aligned_free(void *p)
-{
-    unsigned char *p_base, *p_use;
-    if(p != NULL)
-    {
-        p_use = (unsigned char *)p;
-        p_base = *(unsigned char **)(p_use - sizeof(void*));
-        free(p_base);
-    }
-}
+#else // defined(USE_CUSTOM_LIBOPUS_CODEC) && USE_CUSTOM_LIBOPUS_CODEC
 
 int16_t WebRtcOpus_DecoderCreate(OpusDecInst** inst, size_t channels)
 {
-    OpusDecInst *state;
+    int error;
+    OpusDecInst* state;
 
     if (inst != NULL)
     {
@@ -734,31 +707,21 @@ int16_t WebRtcOpus_DecoderCreate(OpusDecInst** inst, size_t channels)
         state = (OpusDecInst*) calloc(1, sizeof(OpusDecInst));
         if (state == NULL) { return -1; }
 
-        AUDIODEC_PARAM dec_param;
-        memset(&dec_param, 0, sizeof(dec_param));
-        dec_param.reserved[0] = 48000;
-        dec_param.reserved[1] = channels;
-
-        MEM_TAB mem_blk;
-        memset(&mem_blk, 0, sizeof(mem_blk));
-        HIK_OPUSDEC_GetMemSize(&dec_param, &mem_blk);
-        mem_blk.base = aligned_malloc(mem_blk.size, mem_blk.alignment);
-
-        void *opus_handle = NULL;
-        HRESULT codec_ret = HIK_OPUSDEC_Create(&dec_param, &mem_blk, &opus_handle);
-        if (codec_ret != HIK_AUDIOCODEC_LIB_S_OK)
+        // Create new memory, always at 48000 Hz.
+        state->decoder = opus_decoder_create(48000, (int)channels, &error);
+        if (error == OPUS_OK && state->decoder)
         {
-            aligned_free(mem_blk.base);
-            free(state);
-            return -1;
+            // Creation of memory all ok.
+            state->channels = channels;
+            state->prev_decoded_samples = 960;
+            state->in_dtx_mode = 0;
+            *inst = state;
+            return 0;
         }
 
-        state->dec_buf = (U08*)aligned_malloc(AUDIO_CODEC_BUF_SIZE, mem_blk.alignment);
-        state->decoder = opus_handle;
-        state->channels = channels;
-        state->prev_decoded_samples = 960;
-        *inst = state;
-        return 0;
+        // If memory allocation was unsuccessful, free the entire state.
+        if (state->decoder) { opus_decoder_destroy(state->decoder); }
+        free(state);
     }
 
     return -1;
@@ -778,7 +741,7 @@ int16_t WebRtcOpus_DecoderFree(OpusDecInst* inst)
 {
     if (inst)
     {
-        if (inst->decoder) { /* TODO: free hik decoder inst */ }
+        if (inst->decoder) { opus_decoder_destroy(inst->decoder); }
 
         free(inst);
         return 0;
@@ -804,107 +767,36 @@ int WebRtcOpus_Decode(OpusDecInst* inst,
                       int16_t* decoded,
                       int16_t* audio_type)
 {
-    int decoded_samples;
+    int dec_ret;
 
     *audio_type = 0;
 
-    AUDIODEC_PROCESS_PARAM dec_ctx;
-    memset(&dec_ctx, 0, sizeof(dec_ctx));
-    dec_ctx.out_buf = inst->dec_buf;
-    if (encoded_bytes == 0)
+    dec_ret = opus_decode(inst->decoder, encoded, (opus_int32)encoded_bytes,
+                      (opus_int16*)decoded, (48*20), 0);
+    if (dec_ret > 0)
     {
-        dec_ctx.in_buf = NULL;
-        dec_ctx.in_data_size = 0;
-    }
-    else
-    {
-        dec_ctx.in_buf = (U08*)encoded;
-        dec_ctx.in_data_size = encoded_bytes;
+        inst->prev_decoded_samples = dec_ret;
     }
 
-    HRESULT codec_ret = HIK_OPUSDEC_Decode(inst->decoder, &dec_ctx);
-    if (codec_ret != HIK_AUDIOCODEC_LIB_S_OK)
-    {
-        return -1;
-    }
-
-    decoded_samples = dec_ctx.out_frame_size >> 1;
-    memcpy(decoded, dec_ctx.out_buf, dec_ctx.out_frame_size);
-
-    inst->prev_decoded_samples = decoded_samples;
-
-    return decoded_samples;
+    return dec_ret;
 }
 
-int WebRtcOpus_DecodePlc(OpusDecInst* inst,
-                         int16_t* decoded,
-                         int number_of_lost_frames)
+int WebRtcOpus_DecodePlc(OpusDecInst* inst, int16_t* decoded, int number_of_lost_frames)
 {
-    int decoded_samples;
+    int dec_ret;
 
-    AUDIODEC_PROCESS_PARAM dec_ctx;
-    memset(&dec_ctx, 0, sizeof(dec_ctx));
-    dec_ctx.out_buf = inst->dec_buf;
-    dec_ctx.in_buf = NULL;
-    dec_ctx.in_data_size = 0;
+    int plc_samples = 48*20 * number_of_lost_frames;
+    dec_ret = opus_decode(inst->decoder, NULL, 0, (opus_int16*)decoded, plc_samples, 0);
+    if (dec_ret < 0) { return -1; }
 
-    HRESULT codec_ret = HIK_OPUSDEC_Decode(inst->decoder, &dec_ctx);
-    if (codec_ret != HIK_AUDIOCODEC_LIB_S_OK)
-    {
-        return -1;
-    }
-
-    decoded_samples = dec_ctx.out_frame_size >> 1;
-    memcpy(decoded, dec_ctx.out_buf, dec_ctx.out_frame_size);
-
-    return decoded_samples;
+    return dec_ret;
 }
 
 int WebRtcOpus_DecodeFec(OpusDecInst* inst,
-                         const uint8_t* encoded,
-                         size_t encoded_bytes,
-                         int16_t* decoded,
-                         int16_t* audio_type)
+                         const uint8_t* encoded, size_t encoded_bytes,
+                         int16_t* decoded, int16_t* audio_type)
 {
     return 0;
-}
-
-static
-int opus_packet_get_nb_frames(const uint8_t packet[], int32_t len)
-{
-   int count;
-   if (len<1) { return -1; }
-
-   count = packet[0]&0x3;
-   if (count==0)
-      return 1;
-   else if (count!=3)
-      return 2;
-   else if (len<2)
-      return -4;
-   else
-      return packet[1]&0x3F;
-}
-
-static
-int opus_packet_get_samples_per_frame(const uint8_t *data, int32_t Fs)
-{
-   int audiosize;
-   if (data[0]&0x80)
-   {
-      audiosize = ((data[0]>>3)&0x3);
-      audiosize = (Fs<<audiosize)/400;
-   } else if ((data[0]&0x60) == 0x60)
-   {
-      audiosize = (data[0]&0x08) ? Fs/50 : Fs/100;
-   } else {
-      audiosize = ((data[0]>>3)&0x3);
-      if (audiosize == 3)
-         audiosize = Fs*60/1000;
-      else
-         audiosize = (Fs<<audiosize)/100;
-   }
-   return audiosize;
 }
 
 int WebRtcOpus_DurationEst(OpusDecInst* inst,
@@ -942,17 +834,15 @@ int WebRtcOpus_PlcDuration(OpusDecInst* inst)
     return inst->prev_decoded_samples;
 }
 
-int WebRtcOpus_FecDurationEst(const uint8_t* payload,
-                              size_t payload_length_bytes)
+int WebRtcOpus_FecDurationEst(const uint8_t* payload, size_t payload_length_bytes)
 {
-    // hik opus解码不支持FEC，此处固定返回0
+    // custome opus codec不支持FEC，此处固定返回0
     return 0;
 }
 
-int WebRtcOpus_PacketHasFec(const uint8_t* payload,
-                            size_t payload_length_bytes)
+int WebRtcOpus_PacketHasFec(const uint8_t* payload, size_t payload_length_bytes)
 {
-    // hik opus解码不支持FEC，此处固定返回0
+    // custome opus codec不支持FEC，此处固定返回0
     return 0;
 }
 

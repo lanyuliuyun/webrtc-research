@@ -13,8 +13,6 @@
 
 #include <stddef.h>
 
-#if defined(USE_LIBOPUS_CODEEC) && USE_LIBOPUS_CODEEC
-
 #include "rtc_base/ignore_wundef.h"
 
 RTC_PUSH_IGNORING_WUNDEF()
@@ -36,24 +34,5 @@ struct WebRtcOpusDecInst {
   size_t channels;
   int in_dtx_mode;
 };
-
-#else
-    
-#include "hik_opus.h"
-
-struct WebRtcOpusEncInst {
-  void *encoder;
-  size_t channels;
-  int in_dtx_mode;
-};
-
-struct WebRtcOpusDecInst {
-  void *decoder;
-  void *dec_buf;
-  int prev_decoded_samples;
-  size_t channels;
-};
-
-#endif
 
 #endif  // MODULES_AUDIO_CODING_CODECS_OPUS_OPUS_INST_H_
