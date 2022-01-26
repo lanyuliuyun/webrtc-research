@@ -15,33 +15,10 @@
 
 #include "api/audio_codecs/audio_decoder_factory_template.h"
 #if WEBRTC_USE_BUILTIN_OPUS
-#include "api/audio_codecs/opus/audio_decoder_multi_channel_opus.h"
 #include "api/audio_codecs/opus/audio_decoder_opus.h"  // nogncheck
 #endif
 
 namespace webrtc {
-
-namespace {
-
-// Modify an audio decoder to not advertise support for anything.
-template <typename T>
-struct NotAdvertised {
-  using Config = typename T::Config;
-  static absl::optional<Config> SdpToConfig(
-      const SdpAudioFormat& audio_format) {
-    return T::SdpToConfig(audio_format);
-  }
-  static void AppendSupportedDecoders(std::vector<AudioCodecSpec>* specs) {
-    // Don't advertise support for anything.
-  }
-  static std::unique_ptr<AudioDecoder> MakeAudioDecoder(
-      const Config& config,
-      absl::optional<AudioCodecPairId> codec_pair_id = absl::nullopt) {
-    return T::MakeAudioDecoder(config, codec_pair_id);
-  }
-};
-
-}  // namespace
 
 rtc::scoped_refptr<AudioDecoderFactory> CreateBuiltinAudioDecoderFactory() {
   return CreateAudioDecoderFactory<

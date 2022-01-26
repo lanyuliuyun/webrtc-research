@@ -38,10 +38,8 @@ set(api_SRCS
     api/audio/audio_frame.cc
     api/audio_codecs/audio_codec_pair_id.cc
     api/audio_codecs/audio_decoder.cc
-    api/audio_codecs/audio_encoder.cc
     api/audio_codecs/audio_format.cc
     api/audio_codecs/builtin_audio_decoder_factory.cc
-    api/audio_codecs/opus/audio_decoder_multi_channel_opus.cc
     api/audio_codecs/opus/audio_decoder_opus.cc
     api/task_queue/task_queue_base.cc
 )
@@ -114,13 +112,11 @@ set(vad_SRCS
 )
 
 set(cng_SRCS
-    modules/audio_coding/codecs/cng/audio_encoder_cng.cc
     modules/audio_coding/codecs/cng/webrtc_cng.cc
 )
 
 set(codec_opus_SRCS
     modules/audio_coding/codecs/opus/audio_coder_opus_common.cc
-    modules/audio_coding/codecs/opus/audio_decoder_multi_channel_opus_impl.cc
     modules/audio_coding/codecs/opus/audio_decoder_opus.cc
     modules/audio_coding/codecs/opus/opus_interface.c
 )
@@ -170,7 +166,6 @@ set(neteq_SRCS
 
 add_library(neteq 
     ${neteq_SRCS}
-    ${abseil_SRCS}
     ${rtc_base_SRCS}
     ${api_SRCS}
     ${signal_processing_SRCS}
