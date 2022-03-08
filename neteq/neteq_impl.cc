@@ -120,7 +120,7 @@ NetEqImpl::NetEqImpl(const NetEq::Config& config,
                                 tick_timer_.get()),
       no_time_stretching_(config.for_test_no_time_stretching),
       enable_rtx_handling_(config.enable_rtx_handling) {
-  RTC_LOG(LS_INFO) << "NetEq config: " << config.ToString();
+  //RTC_LOG(LS_INFO) << "NetEq config: " << config.ToString();
   int fs = config.sample_rate_hz;
   if (fs != 8000 && fs != 16000 && fs != 32000 && fs != 48000) {
     RTC_LOG(LS_ERROR) << "Sample rate " << fs << " Hz not supported. "

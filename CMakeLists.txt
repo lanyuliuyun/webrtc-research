@@ -5,7 +5,7 @@ project(webrtc-research)
 set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/lib)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_BINARY_DIR}/bin)
 
-set(LIBOPUS_ROOT "D:/03.opensource/opus-v1.3.1")
+set(LIBOPUS_ROOT "E:/04.OpenSource/opus-1.3.1")
 
 if (MSVC)
     add_compile_options(
@@ -40,6 +40,8 @@ elseif (UNIX)
 endif()
 
 include_directories(
+    ${PROJECT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/common_base
     ${LIBOPUS_ROOT}/include
 )
 
@@ -47,5 +49,10 @@ link_directories(
     ${LIBOPUS_ROOT}/build
 )
 
+add_subdirectory(common_base)
+add_subdirectory(common_audio)
+
 add_subdirectory(neteq)
-add_subdirectory(neteq_test)
+#add_subdirectory(neteq_test)
+
+add_subdirectory(aec3)

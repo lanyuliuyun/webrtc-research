@@ -22,6 +22,7 @@ NetEq::Config::~Config() = default;
 NetEq::Config& NetEq::Config::operator=(const Config&) = default;
 NetEq::Config& NetEq::Config::operator=(Config&&) = default;
 
+#if 0
 std::string NetEq::Config::ToString() const {
   char buf[1024];
   rtc::SimpleStringBuilder ss(buf);
@@ -34,6 +35,7 @@ std::string NetEq::Config::ToString() const {
      << ", enable_rtx_handling=" << (enable_rtx_handling ? "true" : "false");
   return ss.str();
 }
+#endif
 
 // Creates all classes needed and inject them into a new NetEqImpl object.
 // Return the new object.

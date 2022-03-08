@@ -119,7 +119,7 @@ class NetEq {
     Config& operator=(const Config&);
     Config& operator=(Config&&);
 
-    std::string ToString() const;
+    //std::string ToString() const;
 
     int sample_rate_hz = 16000;  // Initial value. Will change with input data.
     bool enable_post_decode_vad = false;

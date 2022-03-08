@@ -1,0 +1,66 @@
+
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+set(aec3_SRCS
+    adaptive_fir_filter.cc
+    aec3_common.cc
+    aec3_fft.cc
+    aec_state.cc
+    api_call_jitter_metrics.cc
+    block_delay_buffer.cc
+    block_framer.cc
+    block_processor.cc
+    block_processor_metrics.cc
+    cascaded_biquad_filter.cc
+    clockdrift_detector.cc
+    comfort_noise_generator.cc
+    decimator.cc
+    downsampled_render_buffer.cc
+    echo_audibility.cc
+    echo_canceller3.cc
+    echo_path_delay_estimator.cc
+    echo_path_variability.cc
+    echo_remover.cc
+    echo_remover_metrics.cc
+    erl_estimator.cc
+    erle_estimator.cc
+    fft_buffer.cc
+    filter_analyzer.cc
+    frame_blocker.cc
+    fullband_erle_estimator.cc
+    main_filter_update_gain.cc
+    matched_filter.cc
+    matched_filter_lag_aggregator.cc
+    matrix_buffer.cc
+    moving_average.cc
+    render_buffer.cc
+    render_delay_buffer.cc
+    render_delay_controller.cc
+    render_delay_controller_metrics.cc
+    render_reverb_model.cc
+    render_signal_analyzer.cc
+    residual_echo_estimator.cc
+    reverb_decay_estimator.cc
+    reverb_frequency_response.cc
+    reverb_model.cc
+    reverb_model_estimator.cc
+    reverb_model_fallback.cc
+    shadow_filter_update_gain.cc
+    signal_dependent_erle_estimator.cc
+    skew_estimator.cc
+    stationarity_estimator.cc
+    subband_erle_estimator.cc
+    subtractor.cc
+    subtractor_output.cc
+    subtractor_output_analyzer.cc
+    suppression_filter.cc
+    suppression_gain.cc
+    vector_buffer.cc
+)
+
+add_library(aec3 ${aec3_SRCS})
+target_compile_definitions(aec3
+    PRIVATE WEBRTC_APM_DEBUG_DUMP=0
+)
